@@ -1,357 +1,273 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Jayden's Spelling Bee</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <style>
-    * {
-      box-sizing: border-box;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }
+import React, { useState, useEffect } from "react";
+import "./App.css";
 
-    body {
-      margin: 0;
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      background: radial-gradient(circle at top, #ffecd2, #fcb69f, #a1c4fd, #c2e9fb);
-      background-size: 200% 200%;
-      animation: bgMove 16s ease infinite;
-    }
+const WORDS = [
+  { word: "verdict", definition: "a decision made by a jury in court.", sentence: "The jury reached a guilty verdict." },
+  { word: "garbled", definition: "confused or unclear; mixed up.", sentence: "The message was garbled and hard to understand." },
+  { word: "encourages", definition: "gives support or confidence.", sentence: "The coach encourages the team before each game." },
+  { word: "imitation", definition: "a copy of something.", sentence: "The necklace was only an imitation of the real jewels." },
+  { word: "miniature", definition: "very small; tiny version of something.", sentence: "He built a miniature model of the city." },
+  { word: "receptionist", definition: "a person who greets visitors or answers phones.", sentence: "The receptionist welcomed us to the office." },
+  { word: "preamble", definition: "an introduction to a speech or document.", sentence: "We read the preamble to the Constitution in class." },
+  { word: "plausible", definition: "seems believable or reasonable.", sentence: "Her excuse sounded plausible, so the teacher accepted it." },
+  { word: "reprimanding", definition: "scolding someone for doing wrong.", sentence: "The parent was reprimanding the child for running in the street." },
+  { word: "commotion", definition: "a noisy disturbance.", sentence: "There was a loud commotion in the hallway." },
+  { word: "oblivion", definition: "the state of not being aware.", sentence: "He slept in complete oblivion to the storm outside." },
+  { word: "immigrants", definition: "people who move to a new country to live.", sentence: "Many immigrants came to the country to find new opportunities." },
+  { word: "steeple", definition: "a tall tower on a church.", sentence: "We could see the church steeple from far away." },
+  { word: "spectators", definition: "people who watch an event.", sentence: "The spectators cheered as the team scored." },
+  { word: "lanyards", definition: "cords worn around the neck to hold keys or IDs.", sentence: "The students wore lanyards with their school badges." },
+  { word: "suspicious", definition: "feeling that something is wrong or not trustworthy.", sentence: "The dog gave a suspicious look at the stranger." },
+  { word: "parchment", definition: "old-style paper made from animal skin.", sentence: "The map was drawn on yellowed parchment." },
+  { word: "ramshackle", definition: "poorly built or falling apart.", sentence: "They fixed up the ramshackle old house." },
+  { word: "fugitive", definition: "a person running away to avoid being caught.", sentence: "The police searched for the fugitive." },
+  { word: "heron", definition: "a tall bird that lives near water.", sentence: "A heron stood still by the pond." },
+  { word: "dissolving", definition: "breaking apart or melting into liquid.", sentence: "The sugar was dissolving in the hot tea." },
+  { word: "nomad", definition: "a person who moves from place to place.", sentence: "The nomad traveled with his animals across the desert." },
+  { word: "billowed", definition: "swelled outward like a wave or cloud.", sentence: "Smoke billowed out of the chimney." },
+  { word: "skewer", definition: "a long stick used for holding food.", sentence: "We cooked vegetables on a metal skewer." },
+  { word: "Berlin", definition: "the capital city of Germany.", sentence: "They visited Berlin on their trip to Europe." },
+  { word: "lunacy", definition: "wild or foolish behavior.", sentence: "Trying to jump that far was pure lunacy." },
+  { word: "conjure", definition: "to make something appear using magic.", sentence: "The magician seemed to conjure a rabbit out of nowhere." },
+  { word: "bracken", definition: "a type of fern plant.", sentence: "We walked through tall bracken in the forest." },
+  { word: "noggin", definition: "a funny word for head.", sentence: "He bumped his noggin on the low doorway." },
+  { word: "neon", definition: "very bright, glowing light or color.", sentence: "The neon sign lit up the street." },
+  { word: "rakish", definition: "stylish in a slightly bold way.", sentence: "He wore a rakish hat tilted to one side." },
+  { word: "hypnosis", definition: "a trance-like state where a person is very focused.", sentence: "During hypnosis, she felt very relaxed." },
+  { word: "rotunda", definition: "a round building or room.", sentence: "The museum has a huge rotunda in the center." }
+];
 
-    @keyframes bgMove {
-      0% { background-position: 0% 0%; }
-      50% { background-position: 100% 100%; }
-      100% { background-position: 0% 0%; }
-    }
+function shuffle(array) {
+  const arr = [...array];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
 
-    .card {
-      background: rgba(255, 255, 255, 0.96);
-      border-radius: 20px;
-      padding: 20px;
-      max-width: 520px;
-      width: 95%;
-      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
-    }
+function speak(text) {
+  if (!("speechSynthesis" in window)) return;
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = "en-US";
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(utterance);
+}
 
-    h1 {
-      margin-top: 0;
-      text-align: center;
-      font-size: 1.9rem;
-    }
+function App() {
+  const [started, setStarted] = useState(false);
+  const [order, setOrder] = useState(() => shuffle(WORDS));
+  const [index, setIndex] = useState(0);
+  const [answer, setAnswer] = useState("");
+  const [feedback, setFeedback] = useState("");
+  const [feedbackType, setFeedbackType] = useState(""); // "correct" | "wrong" | ""
+  const [info, setInfo] = useState(
+    "Click Start Practice to begin the spelling bee."
+  );
+  const [correctCount, setCorrectCount] = useState(0);
+  const [attemptedCount, setAttemptedCount] = useState(0);
 
-    .sub {
-      text-align: center;
-      font-size: 0.95rem;
-      color: #555;
-      margin-bottom: 14px;
-    }
+  const totalWords = order.length;
+  const currentWord = order[index];
 
-    .section-title {
-      font-weight: 600;
-      margin-top: 10px;
-      margin-bottom: 4px;
-      font-size: 0.95rem;
-    }
-
-    .bee-row {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      justify-content: center;
-      margin-bottom: 12px;
-    }
-
-    button {
-      padding: 8px 12px;
-      font-size: 0.9rem;
-      border-radius: 999px;
-      border: none;
-      cursor: pointer;
-      font-weight: 600;
-      transition: transform 0.08s ease, box-shadow 0.08s ease, opacity 0.1s ease;
-      white-space: nowrap;
-    }
-
-    button:active {
-      transform: translateY(1px);
-      box-shadow: none;
-      opacity: 0.92;
-    }
-
-    .btn-main {
-      background: #ffca28;
-      color: #4a2b00;
-      box-shadow: 0 4px 10px rgba(255, 202, 40, 0.6);
-    }
-
-    .btn-accent {
-      background: #42a5f5;
-      color: white;
-      box-shadow: 0 4px 10px rgba(66, 165, 245, 0.5);
-    }
-
-    .btn-ghost {
-      background: transparent;
-      border: 1px dashed #999;
-      color: #555;
-    }
-
-    .input-row {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 8px;
-    }
-
-    input[type="text"] {
-      flex: 1;
-      padding: 10px;
-      font-size: 1.1rem;
-      border-radius: 12px;
-      border: 2px solid #cccccc;
-      outline: none;
-    }
-
-    input[type="text"]:focus {
-      border-color: #42a5f5;
-    }
-
-    .info-box {
-      background: #f5f7ff;
-      border-radius: 10px;
-      padding: 10px;
-      font-size: 0.95rem;
-      min-height: 2.2em;
-    }
-
-    .feedback {
-      font-size: 1rem;
-      font-weight: 600;
-      min-height: 1.7em;
-      margin-top: 6px;
-    }
-
-    .feedback.correct {
-      color: #2e7d32;
-    }
-
-    .feedback.wrong {
-      color: #c62828;
-    }
-
-    .score {
-      text-align: center;
-      font-size: 0.95rem;
-      margin-top: 6px;
-      color: #333;
-    }
-
-    .tiny {
-      font-size: 0.8rem;
-      text-align: center;
-      color: #777;
-      margin-top: 4px;
-    }
-
-    @media (max-width: 480px) {
-      h1 { font-size: 1.6rem; }
-      .card { padding: 16px; }
-      button { font-size: 0.85rem; }
-    }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <h1>Jayden's Spelling Bee</h1>
-    <div class="sub">
-      Click <strong>Hear Word</strong>, then spell it like a real spelling bee champ! 🐝
-    </div>
-
-    <div class="bee-row">
-      <button id="hearWordBtn" class="btn-main">🔊 Hear Word</button>
-      <button id="hearAgainBtn" class="btn-ghost">🔁 Hear Again</button>
-      <button id="definitionBtn" class="btn-ghost">📘 Definition</button>
-      <button id="sentenceBtn" class="btn-ghost">📝 Use in a Sentence</button>
-      <button id="skipBtn" class="btn-ghost">⏭ Skip</button>
-    </div>
-
-    <div class="section-title">Type the spelling:</div>
-    <div class="input-row">
-      <input id="answerInput" type="text" autocomplete="off" />
-      <button id="checkBtn" class="btn-accent">Check</button>
-    </div>
-
-    <div class="section-title">Clue:</div>
-    <div id="infoBox" class="info-box"></div>
-
-    <div id="feedback" class="feedback"></div>
-    <div id="score" class="score"></div>
-    <div class="tiny">Tip: Press <strong>Enter</strong> to check your spelling.</div>
-  </div>
-
-  <script>
-    // Word list with definitions & simple sentences
-    const WORDS = [
-      { word: "verdict", definition: "a decision made by a jury in court.", sentence: "The jury reached a guilty verdict." },
-      { word: "garbled", definition: "confused or unclear; mixed up.", sentence: "The message was garbled and hard to understand." },
-      { word: "encourages", definition: "gives support or confidence.", sentence: "The coach encourages the team before each game." },
-      { word: "imitation", definition: "a copy of something.", sentence: "The necklace was only an imitation of the real jewels." },
-      { word: "miniature", definition: "very small; tiny version of something.", sentence: "He built a miniature model of the city." },
-      { word: "receptionist", definition: "a person who greets visitors or answers phones.", sentence: "The receptionist welcomed us to the office." },
-      { word: "preamble", definition: "an introduction to a speech or document.", sentence: "We read the preamble to the Constitution in class." },
-      { word: "plausible", definition: "seems believable or reasonable.", sentence: "Her excuse sounded plausible, so the teacher accepted it." },
-      { word: "reprimanding", definition: "scolding someone for doing wrong.", sentence: "The parent was reprimanding the child for running in the street." },
-      { word: "commotion", definition: "a noisy disturbance.", sentence: "There was a loud commotion in the hallway." },
-      { word: "oblivion", definition: "the state of not being aware.", sentence: "He slept in complete oblivion to the storm outside." },
-      { word: "immigrants", definition: "people who move to a new country to live.", sentence: "Many immigrants came to the country to find new opportunities." },
-      { word: "steeple", definition: "a tall tower on a church.", sentence: "We could see the church steeple from far away." },
-      { word: "spectators", definition: "people who watch an event.", sentence: "The spectators cheered as the team scored." },
-      { word: "lanyards", definition: "cords worn around the neck to hold keys or IDs.", sentence: "The students wore lanyards with their school badges." },
-      { word: "suspicious", definition: "feeling that something is wrong or not trustworthy.", sentence: "The dog gave a suspicious look at the stranger." },
-      { word: "parchment", definition: "old-style paper made from animal skin.", sentence: "The map was drawn on yellowed parchment." },
-      { word: "ramshackle", definition: "poorly built or falling apart.", sentence: "They fixed up the ramshackle old house." },
-      { word: "fugitive", definition: "a person running away to avoid being caught.", sentence: "The police searched for the fugitive." },
-      { word: "heron", definition: "a tall bird that lives near water.", sentence: "A heron stood still by the pond." },
-      { word: "dissolving", definition: "breaking apart or melting into liquid.", sentence: "The sugar was dissolving in the hot tea." },
-      { word: "nomad", definition: "a person who moves from place to place.", sentence: "The nomad traveled with his animals across the desert." },
-      { word: "billowed", definition: "swelled outward like a wave or cloud.", sentence: "Smoke billowed out of the chimney." },
-      { word: "skewer", definition: "a long stick used for holding food.", sentence: "We cooked vegetables on a metal skewer." },
-      { word: "Berlin", definition: "the capital city of Germany.", sentence: "They visited Berlin on their trip to Europe." },
-      { word: "lunacy", definition: "wild or foolish behavior.", sentence: "Trying to jump that far was pure lunacy." },
-      { word: "conjure", definition: "to make something appear using magic.", sentence: "The magician seemed to conjure a rabbit out of nowhere." },
-      { word: "bracken", definition: "a type of fern plant.", sentence: "We walked through tall bracken in the forest." },
-      { word: "noggin", definition: "a funny word for head.", sentence: "He bumped his noggin on the low doorway." },
-      { word: "neon", definition: "very bright, glowing light or color.", sentence: "The neon sign lit up the street." },
-      { word: "rakish", definition: "stylish in a slightly bold way.", sentence: "He wore a rakish hat tilted to one side." },
-      { word: "hypnosis", definition: "a trance-like state where a person is very focused.", sentence: "During hypnosis, she felt very relaxed." },
-      { word: "rotunda", definition: "a round building or room.", sentence: "The museum has a huge rotunda in the center." },
-    ];
-
-    // Shuffle helper
-    function shuffle(arr) {
-      for (let i = arr.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
-      }
-      return arr;
-    }
-
-    let order = shuffle([...WORDS]);
-    let currentIndex = 0;
-    let currentWord = order[currentIndex];
-    let correctCount = 0;
-    let attemptedCount = 0;
-
-    const hearWordBtn = document.getElementById("hearWordBtn");
-    const hearAgainBtn = document.getElementById("hearAgainBtn");
-    const definitionBtn = document.getElementById("definitionBtn");
-    const sentenceBtn = document.getElementById("sentenceBtn");
-    const skipBtn = document.getElementById("skipBtn");
-    const checkBtn = document.getElementById("checkBtn");
-    const answerInput = document.getElementById("answerInput");
-    const infoBox = document.getElementById("infoBox");
-    const feedbackEl = document.getElementById("feedback");
-    const scoreEl = document.getElementById("score");
-
-    function speak(text) {
-      if (!("speechSynthesis" in window)) {
-        infoBox.textContent = "Speech not supported in this browser.";
-        return;
-      }
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = "en-US";
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(utterance);
-    }
-
-    function updateScore() {
-      scoreEl.textContent = `Score: ${correctCount} correct out of ${attemptedCount} words`;
-    }
-
-    function loadWord() {
-      if (currentIndex >= order.length) {
-        order = shuffle([...WORDS]);
-        currentIndex = 0;
-      }
-      currentWord = order[currentIndex];
-      answerInput.value = "";
-      feedbackEl.textContent = "";
-      feedbackEl.className = "feedback";
-      infoBox.textContent = "Ask for the definition or a sentence if you need help.";
-      answerInput.focus();
-      updateScore();
-    }
-
-    function nextWord(showAnswer) {
-      if (showAnswer) {
-        feedbackEl.textContent = `The word was "${currentWord.word}".`;
-        feedbackEl.className = "feedback";
-      }
-      setTimeout(() => {
-        currentIndex++;
-        loadWord();
-      }, showAnswer ? 1300 : 0);
-    }
-
-    function checkAnswer() {
-      const guess = answerInput.value.trim();
-      if (!guess) return;
-      attemptedCount++;
-
-      if (guess.toLowerCase() === currentWord.word.toLowerCase()) {
-        correctCount++;
-        feedbackEl.textContent = `✅ Correct! The word is "${currentWord.word}".`;
-        feedbackEl.className = "feedback correct";
-      } else {
-        feedbackEl.textContent = `❌ Not quite. The correct spelling is "${currentWord.word}".`;
-        feedbackEl.className = "feedback wrong";
-      }
-      updateScore();
-
-      setTimeout(() => {
-        currentIndex++;
-        loadWord();
-        speak(currentWord.word); // auto-pronounce next word
-      }, 1600);
-    }
-
-    hearWordBtn.addEventListener("click", () => {
+  useEffect(() => {
+    if (started && currentWord) {
+      // auto speak the word like a real spelling bee
       speak(currentWord.word);
-    });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [started, index]);
 
-    hearAgainBtn.addEventListener("click", () => {
-      speak(currentWord.word);
-    });
+  const handleStart = () => {
+    setStarted(true);
+    setOrder(shuffle(WORDS));
+    setIndex(0);
+    setCorrectCount(0);
+    setAttemptedCount(0);
+    setAnswer("");
+    setFeedback("");
+    setFeedbackType("");
+    setInfo("Ask for the definition or a sentence if you need help.");
+  };
 
-    definitionBtn.addEventListener("click", () => {
-      infoBox.textContent = `Definition: ${currentWord.definition}`;
-    });
+  const goToNextWord = () => {
+    const nextIndex = index + 1;
+    if (nextIndex >= totalWords) {
+      // reshuffle for another round
+      setOrder(shuffle(WORDS));
+      setIndex(0);
+    } else {
+      setIndex(nextIndex);
+    }
+    setAnswer("");
+    setFeedback("");
+    setFeedbackType("");
+    setInfo("Ask for the definition or a sentence if you need help.");
+  };
 
-    sentenceBtn.addEventListener("click", () => {
-      infoBox.textContent = `Sentence: ${currentWord.sentence}`;
-      speak(currentWord.sentence);
-    });
+  const handleCheck = () => {
+    if (!answer.trim()) return;
+    const guess = answer.trim().toLowerCase();
+    const target = currentWord.word.toLowerCase();
 
-    skipBtn.addEventListener("click", () => {
-      attemptedCount++;
-      nextWord(true);
-      updateScore();
-    });
+    const newAttempted = attemptedCount + 1;
+    setAttemptedCount(newAttempted);
 
-    checkBtn.addEventListener("click", checkAnswer);
+    if (guess === target) {
+      setCorrectCount(correctCount + 1);
+      setFeedback(`✅ Correct! The word is "${currentWord.word}".`);
+      setFeedbackType("correct");
+    } else {
+      setFeedback(`❌ Not quite. The correct spelling is "${currentWord.word}".`);
+      setFeedbackType("wrong");
+    }
 
-    answerInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        checkAnswer();
-      }
-    });
+    // move to next word after a pause
+    setTimeout(() => {
+      goToNextWord();
+    }, 1600);
+  };
 
-    // Start the first word
-    loadWord();
-    // Auto-say first word like a real bee
+  const handleSkip = () => {
+    const newAttempted = attemptedCount + 1;
+    setAttemptedCount(newAttempted);
+    setFeedback(`👉 The word was "${currentWord.word}".`);
+    setFeedbackType("");
+    setTimeout(() => {
+      goToNextWord();
+    }, 1300);
+  };
+
+  const handleDefinition = () => {
+    if (!currentWord) return;
+    setInfo(`Definition: ${currentWord.definition}`);
+  };
+
+  const handleSentence = () => {
+    if (!currentWord) return;
+    setInfo(`Sentence: ${currentWord.sentence}`);
+    speak(currentWord.sentence);
+  };
+
+  const handleHearWord = () => {
+    if (!currentWord) return;
     speak(currentWord.word);
-  </script>
-</body>
-</html>
+  };
+
+  const progressPercent =
+    totalWords > 0 ? Math.round(((index + 1) / totalWords) * 100) : 0;
+
+  return (
+    <div className="app-root">
+      <div className="app-bg" />
+      <div className="app-container">
+        <div className="card">
+          {!started ? (
+            <>
+              <h1 className="title">Jayden&apos;s Spelling Bee</h1>
+              <p className="subtitle">
+                Listen to the word, then spell it just like a real spelling bee champ. 🐝
+              </p>
+              <button className="btn btn-big btn-yellow" onClick={handleStart}>
+                Start Practice
+              </button>
+              <p className="hint-text">
+                You&apos;ll hear one word at a time. You can ask for a definition or a
+                sentence, then type your spelling and check your answer.
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="card-header-row">
+                <h1 className="title small-title">Jayden&apos;s Spelling Bee</h1>
+                <div className="round-chip">
+                  Word {index + 1} of {totalWords}
+                </div>
+              </div>
+
+              <div className="progress-wrapper">
+                <div className="progress-bar">
+                  <div
+                    className="progress-fill"
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                </div>
+                <div className="progress-label">
+                  Progress: {progressPercent}%
+                </div>
+              </div>
+
+              <div className="button-row">
+                <button className="btn btn-yellow" onClick={handleHearWord}>
+                  🔊 Hear Word
+                </button>
+                <button className="btn btn-outline" onClick={handleDefinition}>
+                  📘 Definition
+                </button>
+                <button className="btn btn-outline" onClick={handleSentence}>
+                  📝 Sentence
+                </button>
+                <button className="btn btn-outline" onClick={handleSkip}>
+                  ⏭ Skip
+                </button>
+              </div>
+
+              <div className="info-box">
+                {info}
+              </div>
+
+              <div className="input-section">
+                <label className="label" htmlFor="answer-input">
+                  Type the spelling:
+                </label>
+                <div className="input-row">
+                  <input
+                    id="answer-input"
+                    type="text"
+                    value={answer}
+                    onChange={(e) => setAnswer(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleCheck();
+                      }
+                    }}
+                    autoComplete="off"
+                  />
+                  <button className="btn btn-blue" onClick={handleCheck}>
+                    Check
+                  </button>
+                </div>
+              </div>
+
+              <div
+                className={
+                  feedbackType === "correct"
+                    ? "feedback feedback-correct"
+                    : feedbackType === "wrong"
+                    ? "feedback feedback-wrong"
+                    : "feedback"
+                }
+              >
+                {feedback}
+              </div>
+
+              <div className="score-row">
+                <div>
+                  Score:{" "}
+                  <strong>
+                    {correctCount} / {attemptedCount || 0}
+                  </strong>
+                </div>
+                <div className="score-small">
+                  Correct words out of total words tried.
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default App;
