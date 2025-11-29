@@ -244,6 +244,20 @@
       color: #666;
     }
 
+    /* Summary screen styles */
+    #summary-missed-wrapper {
+      margin-top: 10px;
+    }
+
+    #missed-list {
+      padding-left: 20px;
+      font-size: 0.95rem;
+    }
+
+    #missed-list li {
+      margin-bottom: 4px;
+    }
+
     @media (max-width: 600px) {
       .card {
         padding: 18px 16px;
@@ -338,6 +352,22 @@
           </div>
         </div>
 
+        <!-- Summary screen -->
+        <div id="summary-screen" style="display: none;">
+          <h1 class="title">Round Summary</h1>
+          <p class="subtitle">Great work, Jayden! Here are the words to review:</p>
+          <p class="hint-text" id="summary-score"></p>
+
+          <div id="summary-missed-wrapper">
+            <p class="label">Words you missed this round:</p>
+            <ul id="missed-list"></ul>
+          </div>
+
+          <button class="btn btn-big btn-yellow" id="restart-btn">
+            Play Again
+          </button>
+        </div>
+
       </div>
     </div>
   </div>
@@ -345,6 +375,10 @@
   <script>
     // ---------- WORD LIST ----------
     const WORDS = [
+      { word: "dubious", definition: "uncertain or doubtful.", sentence: "I was dubious about whether the story was true." },
+      { word: "ebony", definition: "a dark, black-colored wood or color.", sentence: "The piano was made of shiny ebony wood." },
+      { word: "foreign", definition: "from another country.", sentence: "She loves trying foreign foods when she travels." },
+      { word: "paltry", definition: "small or worthless in amount.", sentence: "He received a paltry reward for all his hard work." },
       { word: "verdict", definition: "a decision made by a jury in court.", sentence: "The jury reached a guilty verdict." },
       { word: "garbled", definition: "confused or unclear; mixed up.", sentence: "The message was garbled and hard to understand." },
       { word: "encourages", definition: "gives support or confidence.", sentence: "The coach encourages the team before each game." },
@@ -377,7 +411,18 @@
       { word: "neon", definition: "very bright, glowing light or color.", sentence: "The neon sign lit up the street." },
       { word: "rakish", definition: "stylish in a slightly bold way.", sentence: "He wore a rakish hat tilted to one side." },
       { word: "hypnosis", definition: "a trance-like state where a person is very focused.", sentence: "During hypnosis, she felt very relaxed." },
-      { word: "rotunda", definition: "a round building or room.", sentence: "The museum has a huge rotunda in the center." }
+      { word: "rotunda", definition: "a round building or room.", sentence: "The museum has a huge rotunda in the center." },
+      { word: "gusto", definition: "great excitement or enjoyment.", sentence: "She sang the song with great gusto." },
+      { word: "toiletries", definition: "items for washing and grooming.", sentence: "He packed his toiletries, like toothpaste and soap, for the trip." },
+      { word: "gleaned", definition: "gathered or collected bit by bit.", sentence: "She gleaned clues from the detective story." },
+      { word: "jeered", definition: "mocked or shouted at in a mean way.", sentence: "It’s not kind to jeer at someone’s mistake." },
+      { word: "winsome", definition: "charming and pleasant.", sentence: "The puppy had a winsome smile." },
+      { word: "prattling", definition: "talking in a silly or babbling way.", sentence: "The toddlers were prattling happily in the playroom." },
+      { word: "galore", definition: "in great amounts; plenty.", sentence: "There were candies galore at the party." },
+      { word: "emporium", definition: "a big store that sells many things.", sentence: "We bought souvenirs at the huge emporium." },
+      { word: "atrium", definition: "a large open space inside a building.", sentence: "Sunlight poured into the glass atrium." },
+      { word: "eccentric", definition: "strange or unusual in a fun way.", sentence: "His eccentric outfits made everyone smile." },
+      { word: "savant", definition: "a very knowledgeable or gifted person.", sentence: "The young math savant could solve problems in seconds." }
     ];
 
     function shuffle(array) {
@@ -403,11 +448,15 @@
     let index = 0;
     let correctCount = 0;
     let attemptedCount = 0;
+    let missedWords = [];
 
     // ---------- DOM ELEMENTS ----------
     const startScreen = document.getElementById("start-screen");
     const gameScreen = document.getElementById("game-screen");
+    const summaryScreen = document.getElementById("summary-screen");
+
     const startBtn = document.getElementById("start-btn");
+    const restartBtn = document.getElementById("restart-btn");
 
     const roundChip = document.getElementById("round-chip");
     const progressFill = document.getElementById("progress-fill");
@@ -426,8 +475,17 @@
     const scoreCorrectEl = document.getElementById("score-correct");
     const scoreAttemptedEl = document.getElementById("score-attempted");
 
+    const summaryScoreEl = document.getElementById("summary-score");
+    const missedListEl = document.getElementById("missed-list");
+
     function currentWord() {
       return order[index];
+    }
+
+    function addMissedWord(wordObj) {
+      if (!missedWords.some(w => w.word === wordObj.word)) {
+        missedWords.push(wordObj);
+      }
     }
 
     function updateProgressUI() {
@@ -446,10 +504,12 @@
     }
 
     function loadWord() {
+      // If we've finished the list, show summary instead of loading a new word
       if (index >= order.length) {
-        order = shuffle(WORDS);
-        index = 0;
+        showSummary();
+        return;
       }
+
       answerInput.value = "";
       feedbackEl.textContent = "";
       feedbackEl.className = "feedback";
@@ -458,29 +518,47 @@
       updateScoreUI();
     }
 
-    function goToNextWord(delayShowAnswer, showAnswerText) {
-      if (delayShowAnswer && showAnswerText) {
-        feedbackEl.textContent = showAnswerText;
+    function showSummary() {
+      gameScreen.style.display = "none";
+      startScreen.style.display = "none";
+      summaryScreen.style.display = "block";
+
+      summaryScoreEl.textContent =
+        "You spelled " + correctCount + " correctly out of " + attemptedCount + " tried.";
+
+      missedListEl.innerHTML = "";
+
+      if (missedWords.length === 0) {
+        const li = document.createElement("li");
+        li.textContent = "Awesome! You got every word correct this round! 🏅";
+        missedListEl.appendChild(li);
+      } else {
+        missedWords.forEach(w => {
+          const li = document.createElement("li");
+          li.textContent = w.word + " — " + w.definition;
+          missedListEl.appendChild(li);
+        });
       }
-      setTimeout(function () {
-        index++;
-        loadWord();
-      }, delayShowAnswer ? 1300 : 0);
     }
 
-    function handleStart() {
+    function resetStateForNewRound() {
       started = true;
       order = shuffle(WORDS);
       index = 0;
       correctCount = 0;
       attemptedCount = 0;
+      missedWords = [];
       updateScoreUI();
+    }
+
+    function handleStart() {
+      resetStateForNewRound();
 
       startScreen.style.display = "none";
+      summaryScreen.style.display = "none";
       gameScreen.style.display = "block";
 
       loadWord();
-      // iOS Safari: speak only after user click => this is from click handler
       speak(currentWord().word);
       answerInput.focus();
     }
@@ -499,20 +577,38 @@
       } else {
         feedbackEl.textContent = "❌ Not quite. The correct spelling is \"" + currentWord().word + "\".";
         feedbackEl.className = "feedback feedback-wrong";
+        addMissedWord(currentWord());
       }
       updateScoreUI();
 
       setTimeout(function () {
         index++;
-        loadWord();
-        speak(currentWord().word); // user already interacted, so allowed
+        if (index >= order.length) {
+          showSummary();
+        } else {
+          loadWord();
+          speak(currentWord().word);
+        }
       }, 1600);
     }
 
     function handleSkip() {
       attemptedCount++;
+      addMissedWord(currentWord());
       updateScoreUI();
-      goToNextWord(true, "👉 The word was \"" + currentWord().word + "\".");
+
+      feedbackEl.textContent = "👉 The word was \"" + currentWord().word + "\".";
+      feedbackEl.className = "feedback";
+
+      setTimeout(function () {
+        index++;
+        if (index >= order.length) {
+          showSummary();
+        } else {
+          loadWord();
+          speak(currentWord().word);
+        }
+      }, 1300);
     }
 
     function handleDefinition() {
@@ -532,6 +628,8 @@
 
     // ---------- EVENT LISTENERS ----------
     startBtn.addEventListener("click", handleStart);
+    restartBtn.addEventListener("click", handleStart);
+
     hearWordBtn.addEventListener("click", handleHearWord);
     definitionBtn.addEventListener("click", handleDefinition);
     sentenceBtn.addEventListener("click", handleSentence);
